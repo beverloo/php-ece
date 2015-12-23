@@ -45,9 +45,13 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_ece_p256_export, 0, 0, 1)
   ZEND_ARG_INFO(0, pair)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_p256_compute_key, 0, 0, 2)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_ece_p256_compute_key, 0, 0, 2)
   ZEND_ARG_INFO(0, local_pair)
   ZEND_ARG_INFO(0, peer_pair)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_ece_p256_free, 0, 0, 1)
+  ZEND_ARG_INFO(0, pair)
 ZEND_END_ARG_INFO()
 
 const zend_function_entry ece_functions[] = {
@@ -56,7 +60,8 @@ const zend_function_entry ece_functions[] = {
   PHP_FE(ece_p256_generate,     arginfo_ece_p256_generate)
   PHP_FE(ece_p256_import,       arginfo_ece_p256_import)
   PHP_FE(ece_p256_export,       arginfo_ece_p256_export)
-  PHP_FE(ece_p256_compute_key,  arginfo_p256_compute_key)
+  PHP_FE(ece_p256_compute_key,  arginfo_ece_p256_compute_key)
+  PHP_FE(ece_p256_free,         arginfo_ece_p256_free)
   PHP_FE_END
 };
 
@@ -76,6 +81,21 @@ zend_module_entry ece_module_entry = {
 #ifdef COMPILE_DL_ECE
 ZEND_GET_MODULE(ece)
 #endif
+
+// -----------------------------------------------------------------------------
+// Error messages
+
+const char kRandomBytesRangeError[] =
+    "The number of cryptographically secure random bytes to generate must be "
+    "in range of [1, 8192]";
+const char kRandomBytesAllocationError[] =
+    "Unable to allocate a buffer for the cryptographically secure random bytes";
+const char kRandomBytesEntropyError[] =
+    "Not sufficient entropy available to generate cryptographically secure "
+    "random bytes";
+
+const char kInvalidKeyParameter[] =
+    "supplied resource is not a valid P-256 key pair resource";
 
 // -----------------------------------------------------------------------------
 // Type definitions (P-256 key)
@@ -98,6 +118,9 @@ static EC_KEY* php_ec_key_from_zval(zval* value) {
 
     // zend_fetch_resource will return NULL if the cast is unsuccessful.
     key = zend_fetch_resource(resource, "P-256 key pair", le_ec_key);
+
+  } else {
+    php_error_docref(NULL, E_WARNING, kInvalidKeyParameter);
   }
 
   return key;
@@ -118,21 +141,6 @@ PHP_MINFO_FUNCTION(ece) {}
 PHP_MSHUTDOWN_FUNCTION(ece) {
   return SUCCESS;
 }
-
-// -----------------------------------------------------------------------------
-// Error messages
-
-const char kRandomBytesRangeError[] =
-    "The number of cryptographically secure random bytes to generate must be "
-    "in range of [1, 8192]";
-const char kRandomBytesAllocationError[] =
-    "Unable to allocate a buffer for the cryptographically secure random bytes";
-const char kRandomBytesEntropyError[] =
-    "Not sufficient entropy available to generate cryptographically secure "
-    "random bytes";
-
-const char kExpectKeyResource[] =
-    "expects parameter 1 to be a P-256 key resource";
 
 // -----------------------------------------------------------------------------
 // Utility functions
@@ -199,14 +207,24 @@ PHP_FUNCTION(ece_p256_export) {
     return;
 
   key = php_ec_key_from_zval(value);
-  if (key == NULL) {
-    php_error_docref(NULL, E_WARNING, kExpectKeyResource);
+  if (key == NULL) 
     RETURN_FALSE;
-  }
 
   RETVAL_LONG(42);
 }
 
 PHP_FUNCTION(ece_p256_compute_key) {
   php_error_docref(NULL, E_WARNING, "Not implemented yet");
+}
+
+PHP_FUNCTION(ece_p256_free) {
+  zval* value;
+  EC_KEY* key;
+
+  if (zend_parse_parameters(ZEND_NUM_ARGS(), "z", &value) == FAILURE)
+    return;
+
+  key = php_ec_key_from_zval(value);
+  if (key)
+    zend_list_close(Z_RES_P(value));
 }

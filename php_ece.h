@@ -33,5 +33,6 @@ PHP_FUNCTION(ece_p256_generate);
 PHP_FUNCTION(ece_p256_import);
 PHP_FUNCTION(ece_p256_export);
 PHP_FUNCTION(ece_p256_compute_key);
+PHP_FUNCTION(ece_p256_free);
 
 #endif  // PHP_ECE_H

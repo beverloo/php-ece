@@ -15,9 +15,10 @@ The following functions are available as part of this extension.
   - [ece_p256_generate()](#resource-ece_p256_generate)
   - [ece_p256_import(string $public[, string $private])]
 (#resource-ece_p256_importstring-public-string-private)
-  - [ece_p256_export(resource $pair)](#array-ece_p256_exportresource-pair)
+  - [ece_p256_export(resource $key)](#array-ece_p256_exportresource-key)
   - [ece_p256_compute_key(resource $local_pair, resource $peer_pair)]
 (#string-ece_p256_compute_keyresource-local_pair-resource-peer_pair)
+  - [ece_p256_free(resource $key)](#array-ece_p256_freeresource-key)
 - **Miscellaneous**
   - [ece_random_bytes(int $length)](#string-ece_random_bytesint-length)
 
@@ -41,13 +42,13 @@ The `$private` key, when given, must be a string holding the raw bytes of the
 32-byte long field element representing the private value. It will be verified
 that the `$public` and `$private` keys are indeed a pair.
 
-#### array ece_p256_export(resource $pair);
+#### array ece_p256_export(resource $key);
 
-Exports the `$pair` to an array with two keys: `public` set to a string holding
-the raw bytes of the P-256 public key in `$pair` in uncompressed form per SEC1
+Exports the `$key` to an array with two keys: `public` set to a string holding
+the raw bytes of the P-256 public key in `$key` in uncompressed form per SEC1
 2.3.3, and `private` set to a string holding the raw bytes of the private value.
 
-If the `$pair` does not have a private value, the `private` key in the returned
+If the `$key` does not have a private value, the `private` key in the returned
 array will instead be set to NULL.
 
 #### string ece_p256_compute_key(resource $local_pair, resource $peer_pair);
@@ -57,6 +58,10 @@ the key as a string holding the 32-byte long shared secret.
 
 The `$local_pair` must have both the public and private key set. Only the public
 key of the `$peer_pair` is required.
+
+#### array ece_p256_free(resource $key);
+
+Frees the P-256 key in `$key`.
 
 
 #### string ece_random_bytes(int $length);
