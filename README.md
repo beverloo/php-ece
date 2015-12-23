@@ -13,7 +13,7 @@ The following functions are available as part of this extension.
 
 - **P-256 Functions**
   - [ece_p256_generate()](#resource-ece_p256_generate)
-  - [ece_p256_import(string public[, string private]]
+  - [ece_p256_import(string public[, string private])]
 (#resource-ece_p256_importstring-public-string-private)
   - [ece_p256_export(resource $pair)](#array-ece_p256_exportresource-pair)
   - [ece_p256_compute_key(resource $local_pair, resource $peer_pair)]
@@ -24,8 +24,10 @@ The following functions are available as part of this extension.
 
 #### resource ece_p256_generate();
 
-Generates a new P-256 key pair. Returns NULL and displays an error if the pair
-could not be generated for any reason.
+Generates and returns a new P-256 key pair.
+
+Returns NULL and displays an error if the pair could not be generated for any
+reason.
 
 #### resource ece_p256_import(string public[, string private]);
 
@@ -58,5 +60,6 @@ key of the `peer_pair` is required.
 
 #### string ece_random_bytes(int length);
 
-Creates a string with `length` cryptographically secure random bytes. Will fail
-if there is not sufficient entropy available.
+Creates and returns a string with `length` cryptographically secure random
+bytes. Will fail and display an error if there is not sufficient entropy
+available.
