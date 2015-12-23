@@ -29,10 +29,6 @@
 #include <openssl/evp.h>
 #include <openssl/rand.h>
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_ece_random_bytes, 0, 0, 1)
-  ZEND_ARG_INFO(0, bytes)
-ZEND_END_ARG_INFO()
-
 ZEND_BEGIN_ARG_INFO(arginfo_ece_p256_generate, 0)
 ZEND_END_ARG_INFO()
 
@@ -54,14 +50,18 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_ece_p256_free, 0, 0, 1)
   ZEND_ARG_INFO(0, pair)
 ZEND_END_ARG_INFO()
 
-const zend_function_entry ece_functions[] = {
-  PHP_FE(ece_random_bytes,      arginfo_ece_random_bytes)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_ece_random_bytes, 0, 0, 1)
+  ZEND_ARG_INFO(0, bytes)
+ZEND_END_ARG_INFO()
 
+const zend_function_entry ece_functions[] = {
   PHP_FE(ece_p256_generate,     arginfo_ece_p256_generate)
   PHP_FE(ece_p256_import,       arginfo_ece_p256_import)
   PHP_FE(ece_p256_export,       arginfo_ece_p256_export)
   PHP_FE(ece_p256_compute_key,  arginfo_ece_p256_compute_key)
   PHP_FE(ece_p256_free,         arginfo_ece_p256_free)
+
+  PHP_FE(ece_random_bytes,      arginfo_ece_random_bytes)
   PHP_FE_END
 };
 
@@ -165,26 +165,6 @@ static zend_string* GenerateCryptographicallySecureRandomBytes(size_t length) {
 }
 
 // -----------------------------------------------------------------------------
-// Function implementations (utilities)
-
-PHP_FUNCTION(ece_random_bytes) {
-  zend_long length;
-  if (zend_parse_parameters(ZEND_NUM_ARGS(), "l", &length) == FAILURE)
-    return;
-
-  if (length <= 0 || length > 8192) {
-    php_error_docref(NULL, E_WARNING, kRandomBytesRangeError);
-    RETURN_FALSE;
-  }
-
-  zend_string* buffer = GenerateCryptographicallySecureRandomBytes(length);
-  if (buffer)
-    RETVAL_STR(buffer);
-  else
-    RETURN_FALSE;
-}
-
-// -----------------------------------------------------------------------------
 // Function implementations (P-256)
 
 PHP_FUNCTION(ece_p256_generate) {
@@ -227,4 +207,24 @@ PHP_FUNCTION(ece_p256_free) {
   key = php_ec_key_from_zval(value);
   if (key)
     zend_list_close(Z_RES_P(value));
+}
+
+// -----------------------------------------------------------------------------
+// Function implementations (miscellaneous)
+
+PHP_FUNCTION(ece_random_bytes) {
+  zend_long length;
+  if (zend_parse_parameters(ZEND_NUM_ARGS(), "l", &length) == FAILURE)
+    return;
+
+  if (length <= 0 || length > 8192) {
+    php_error_docref(NULL, E_WARNING, kRandomBytesRangeError);
+    RETURN_FALSE;
+  }
+
+  zend_string* buffer = GenerateCryptographicallySecureRandomBytes(length);
+  if (buffer)
+    RETVAL_STR(buffer);
+  else
+    RETURN_FALSE;
 }
