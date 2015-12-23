@@ -105,10 +105,14 @@ const char kGenerateKeyGenerateError[] =
 
 const char kExportAllocationError[] =
     "unable to allocate a buffer for exporting a key pair";
+const char kExportPublicKeyBignumError[] =
+    "unable to export the public key: cannot write the bignum";
 const char kExportPublicKeyInvalidFields[] =
     "unable to export the public key: invalid field bytes";
 const char kExportPublicKeyFailed[] =
     "unable to export the public key: cannot get affine coordinates";
+const char kExportPrivateKeyBignumError[] =
+    "unable to export the public key: cannot write the bignum";
 
 const char kRandomBytesRangeError[] =
     "the length must be in range of [1, 8192]";
@@ -251,7 +255,7 @@ PHP_FUNCTION(ece_p256_export) {
               BN_bn2bin(y, &buffer[1 + kFieldBytes]) == kFieldBytes) {
             success = 1;
           } else {
-            php_error_docref(NULL, E_ERROR, kExportAllocationError);
+            php_error_docref(NULL, E_ERROR, kExportPublicKeyBignumError);
           }
         } else {
           php_error_docref(NULL, E_ERROR, kExportAllocationError);
@@ -274,8 +278,29 @@ PHP_FUNCTION(ece_p256_export) {
     }
   }
 
+  // Export the private key in |public|, when set, as the 32 bytes representing
+  // the private field point (`w` if it were exported as a JWK key).
+  {
+    const BIGNUM* private_key = EC_KEY_get0_private_key(key);
+    if (private_key) {
+      private_key_string = zend_string_alloc(kFieldBytes, 0);
+      if (private_key_string) {
+        unsigned char* buffer = (unsigned char*) private_key_string->val;
+        if (BN_bn2bin(private_key, buffer) != kFieldBytes) {
+          php_error_docref(NULL, E_ERROR, kExportPrivateKeyBignumError);
+          return;
+        }
+      } else {
+        php_error_docref(NULL, E_ERROR, kExportAllocationError);
+      }
+    }
+  }
+
   add_assoc_str(return_value, "public", public_key_string);
-  add_assoc_null(return_value, "private");
+  if (private_key_string)
+    add_assoc_str(return_value, "private", private_key_string);
+  else
+    add_assoc_null(return_value, "private");
 }
 
 PHP_FUNCTION(ece_p256_compute_key) {

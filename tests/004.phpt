@@ -39,4 +39,4 @@ Warning: ece_p256_export(): supplied resource is not a valid P-256 key pair reso
 
 Warning: ece_p256_export(): supplied resource is not a valid P-256 key pair resource in %s on line 10
 Public key: 65 bytes
-Private key: NULL
+Private key: 32 bytes
