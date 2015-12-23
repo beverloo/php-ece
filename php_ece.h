@@ -27,6 +27,8 @@ PHP_MINIT_FUNCTION(ece);
 PHP_MSHUTDOWN_FUNCTION(ece);
 PHP_MINFO_FUNCTION(ece);
 
+PHP_FUNCTION(ece_random_bytes);
+
 PHP_FUNCTION(ece_p256_generate);
 PHP_FUNCTION(ece_p256_import);
 PHP_FUNCTION(ece_p256_export);

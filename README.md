@@ -11,6 +11,11 @@ This extension is not meant to be used for production usage.
 
 The following functions are available as part of this extension.
 
+#### string ece_random_bytes(int length);
+
+Creates a string with `length` cryptographically secure random bytes. Will fail
+if there is not sufficient entropy available.
+
 #### resource ece_p256_generate();
 
 Generates a new P-256 key pair. Returns NULL and displays an error if the pair

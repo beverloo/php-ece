@@ -24,6 +24,12 @@
 #include "php_ini.h"
 #include "php_ece.h"
 
+#include <openssl/rand.h>
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_ece_random_bytes, 0, 0, 1)
+  ZEND_ARG_INFO(0, bytes)
+ZEND_END_ARG_INFO()
+
 ZEND_BEGIN_ARG_INFO(arginfo_ece_p256_generate, 0)
 ZEND_END_ARG_INFO()
 
@@ -42,52 +48,115 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_p256_compute_key, 0, 0, 2)
 ZEND_END_ARG_INFO()
 
 const zend_function_entry ece_functions[] = {
-   PHP_FE(ece_p256_generate,     arginfo_ece_p256_generate)
-   PHP_FE(ece_p256_import,       arginfo_ece_p256_import)
-   PHP_FE(ece_p256_export,       arginfo_ece_p256_export)
-   PHP_FE(ece_p256_compute_key,  arginfo_p256_compute_key)
-   PHP_FE_END
+  PHP_FE(ece_random_bytes,      arginfo_ece_random_bytes)
+
+  PHP_FE(ece_p256_generate,     arginfo_ece_p256_generate)
+  PHP_FE(ece_p256_import,       arginfo_ece_p256_import)
+  PHP_FE(ece_p256_export,       arginfo_ece_p256_export)
+  PHP_FE(ece_p256_compute_key,  arginfo_p256_compute_key)
+  PHP_FE_END
 };
 
 zend_module_entry ece_module_entry = {
-   STANDARD_MODULE_HEADER,
-   "ece",
-   ece_functions,
-   PHP_MINIT(ece),
-   PHP_MSHUTDOWN(ece),
-   NULL,
-   NULL,
-   PHP_MINFO(ece),
-   PHP_ECE_VERSION,
-   STANDARD_MODULE_PROPERTIES
+  STANDARD_MODULE_HEADER,
+  "ece",
+  ece_functions,
+  PHP_MINIT(ece),
+  PHP_MSHUTDOWN(ece),
+  NULL,
+  NULL,
+  PHP_MINFO(ece),
+  PHP_ECE_VERSION,
+  STANDARD_MODULE_PROPERTIES
 };
 
 #ifdef COMPILE_DL_ECE
 ZEND_GET_MODULE(ece)
 #endif
 
+// -----------------------------------------------------------------------------
+// Extension lifetime functions
+
 PHP_MINIT_FUNCTION(ece) {
-   return SUCCESS;
+  return SUCCESS;
 }
 
 PHP_MINFO_FUNCTION(ece) {}
 
 PHP_MSHUTDOWN_FUNCTION(ece) {
-   return SUCCESS;
+  return SUCCESS;
 }
 
+// -----------------------------------------------------------------------------
+// Error messages
+
+const char kRandomBytesRangeError[] =
+    "The number of cryptographically secure random bytes to generate must be "
+    "in range of [1, 8192]";
+const char kRandomBytesAllocationError[] =
+    "Unable to allocate a buffer for the cryptographically secure random bytes";
+const char kRandomBytesEntropyError[] =
+    "Not sufficient entropy available to generate cryptographically secure "
+    "random bytes";
+
+
+// -----------------------------------------------------------------------------
+// Utility functions
+
+// Creates a buffer of |length| cryptographically secure random bytes. An error
+// will be thrown if the bytes could not be generated, for example because the
+// PRNG doesn't have enough entropy. Ownership of the created string is passed.
+static zend_string* GenerateCryptographicallySecureRandomBytes(size_t length) {
+  zend_string* buffer = zend_string_alloc(length, 0);
+  if (!buffer) {
+    php_error_docref(NULL, E_ERROR, kRandomBytesAllocationError);
+    return NULL;
+  }
+
+  if (RAND_bytes(buffer->val, length) != 1) {
+    php_error_docref(NULL, E_ERROR, kRandomBytesEntropyError);
+    zend_string_release(buffer);
+    return NULL;
+  }
+
+  return buffer;
+}
+
+// -----------------------------------------------------------------------------
+// Function implementations (utilities)
+
+PHP_FUNCTION(ece_random_bytes) {
+  zend_long length;
+  if (zend_parse_parameters(ZEND_NUM_ARGS(), "l", &length) == FAILURE)
+    return;
+
+  if (length <= 0 || length > 8192) {
+    php_error_docref(NULL, E_WARNING, kRandomBytesRangeError);
+    RETURN_FALSE;
+  }
+
+  zend_string* buffer = GenerateCryptographicallySecureRandomBytes(length);
+  if (buffer)
+    RETVAL_STR(buffer);
+  else
+    RETURN_FALSE;
+}
+
+// -----------------------------------------------------------------------------
+// Function implementations (P-256)
+
 PHP_FUNCTION(ece_p256_generate) {
-   php_error_docref(NULL, E_WARNING, "Not implemented yet");
+  php_error_docref(NULL, E_WARNING, "Not implemented yet");
 }
 
 PHP_FUNCTION(ece_p256_import) {
-   php_error_docref(NULL, E_WARNING, "Not implemented yet");
+  php_error_docref(NULL, E_WARNING, "Not implemented yet");
 }
 
 PHP_FUNCTION(ece_p256_export) {
-   php_error_docref(NULL, E_WARNING, "Not implemented yet");
+  php_error_docref(NULL, E_WARNING, "Not implemented yet");
 }
 
 PHP_FUNCTION(ece_p256_compute_key) {
-   php_error_docref(NULL, E_WARNING, "Not implemented yet");
+  php_error_docref(NULL, E_WARNING, "Not implemented yet");
 }
