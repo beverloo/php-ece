@@ -180,7 +180,13 @@ PHP_MINIT_FUNCTION(ece) {
   return SUCCESS;
 }
 
-PHP_MINFO_FUNCTION(ece) {}
+PHP_MINFO_FUNCTION(ece) {
+  php_info_print_table_start();
+  php_info_print_table_row(2, "Encrypted Content Encoding support", "enabled");
+  php_info_print_table_row(2, "ECE version", PHP_ECE_VERSION);
+  php_info_print_table_row(2, "OpenSSL Library Version", SSLeay_version(SSLEAY_VERSION));
+  php_info_print_table_end();
+}
 
 PHP_MSHUTDOWN_FUNCTION(ece) {
   return SUCCESS;
