@@ -24,6 +24,9 @@
 #include "php_ini.h"
 #include "php_ece.h"
 
+#include <stdlib.h>
+#include <openssl/ec.h>
+#include <openssl/evp.h>
 #include <openssl/rand.h>
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_ece_random_bytes, 0, 0, 1)
@@ -75,9 +78,38 @@ ZEND_GET_MODULE(ece)
 #endif
 
 // -----------------------------------------------------------------------------
+// Type definitions (P-256 key)
+
+static int le_ec_key;
+
+static void php_ec_key_free(zend_resource* resource) {
+  EC_KEY* key = (EC_KEY*) resource->ptr;
+  
+  // TODO: Clean up the OpenSSL types it owns.
+
+  resource->ptr = NULL;
+  EC_KEY_free(key);
+}
+
+static EC_KEY* php_ec_key_from_zval(zval* value) {
+  EC_KEY* key = NULL;
+  if (Z_TYPE_P(value) == IS_RESOURCE) {
+    zend_resource* resource = Z_RES_P(value);
+
+    // zend_fetch_resource will return NULL if the cast is unsuccessful.
+    key = zend_fetch_resource(resource, "P-256 key pair", le_ec_key);
+  }
+
+  return key;
+}
+
+// -----------------------------------------------------------------------------
 // Extension lifetime functions
 
 PHP_MINIT_FUNCTION(ece) {
+  le_ec_key = zend_register_list_destructors_ex(
+      php_ec_key_free, NULL, "P-256 key pair", module_number);
+
   return SUCCESS;
 }
 
@@ -99,6 +131,8 @@ const char kRandomBytesEntropyError[] =
     "Not sufficient entropy available to generate cryptographically secure "
     "random bytes";
 
+const char kExpectKeyResource[] =
+    "expects parameter 1 to be a P-256 key resource";
 
 // -----------------------------------------------------------------------------
 // Utility functions
@@ -146,7 +180,11 @@ PHP_FUNCTION(ece_random_bytes) {
 // Function implementations (P-256)
 
 PHP_FUNCTION(ece_p256_generate) {
-  php_error_docref(NULL, E_WARNING, "Not implemented yet");
+  EC_KEY* key = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
+  if (key)
+    RETURN_RES(zend_register_resource(key, le_ec_key));
+
+  RETURN_FALSE;
 }
 
 PHP_FUNCTION(ece_p256_import) {
@@ -154,7 +192,19 @@ PHP_FUNCTION(ece_p256_import) {
 }
 
 PHP_FUNCTION(ece_p256_export) {
-  php_error_docref(NULL, E_WARNING, "Not implemented yet");
+  zval* value;
+  EC_KEY* key;
+
+  if (zend_parse_parameters(ZEND_NUM_ARGS(), "z", &value) == FAILURE)
+    return;
+
+  key = php_ec_key_from_zval(value);
+  if (key == NULL) {
+    php_error_docref(NULL, E_WARNING, kExpectKeyResource);
+    RETURN_FALSE;
+  }
+
+  RETVAL_LONG(42);
 }
 
 PHP_FUNCTION(ece_p256_compute_key) {
