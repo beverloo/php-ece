@@ -12,14 +12,14 @@ This extension is not meant to be used for production usage.
 The following functions are available as part of this extension.
 
 - **P-256 Functions**
-  - [resource ece_p256_generate()](#resource-ece_p256_generate)
-  - [resource ece_p256_import(string public[, string private]]
+  - [ece_p256_generate()](#resource-ece_p256_generate)
+  - [ece_p256_import(string public[, string private]]
 (#resource-ece_p256_importstring-public-string-private)
-  - [array ece_p256_export(resource $pair)](#array-ece_p256_exportresource-pair)
-  - [string ece_p256_compute_key(resource $local_pair, resource $peer_pair)]
+  - [ece_p256_export(resource $pair)](#array-ece_p256_exportresource-pair)
+  - [ece_p256_compute_key(resource $local_pair, resource $peer_pair)]
 (#string-ece_p256_compute_keyresource-local_pair-resource-peer_pair)
 - **Miscellaneous**
-  - [string ece_random_bytes(int length)](#string-ece_random_bytesint-length)
+  - [ece_random_bytes(int length)](#string-ece_random_bytesint-length)
 
 
 #### resource ece_p256_generate();
