@@ -16,8 +16,8 @@ The following functions are available as part of this extension.
   - [ece_p256_import(string $public[, string $private])]
 (#resource-ece_p256_importstring-public-string-private)
   - [ece_p256_export(resource $key)](#array-ece_p256_exportresource-key)
-  - [ece_p256_compute_key(resource $local_pair, resource $peer_pair)]
-(#string-ece_p256_compute_keyresource-local_pair-resource-peer_pair)
+  - [ece_p256_compute_key(resource $local_key, resource $peer_key)]
+(#string-ece_p256_compute_keyresource-local_key-resource-peer_key)
   - [ece_p256_free(resource $key)](#array-ece_p256_freeresource-key)
 - **Miscellaneous**
   - [ece_random_bytes(int $length)](#string-ece_random_bytesint-length)
@@ -51,13 +51,13 @@ the raw bytes of the P-256 public key in `$key` in uncompressed form per SEC1
 If the `$key` does not have a private value, the `private` key in the returned
 array will instead be set to NULL.
 
-#### string ece_p256_compute_key(resource $local_pair, resource $peer_pair);
+#### string ece_p256_compute_key(resource $local_key, resource $peer_key);
 
-Computes the shared key between the `$local_pair` and the `$peer_pair`, returns
+Computes the shared key between the `$local_key` and the `$peer_key`, returns
 the key as a string holding the 32-byte long shared secret.
 
-The `$local_pair` must have both the public and private key set. Only the public
-key of the `$peer_pair` is required.
+The `$local_key` must have both the public and private key set. Only the public
+key of the `$peer_key` is required.
 
 #### array ece_p256_free(resource $key);
 
