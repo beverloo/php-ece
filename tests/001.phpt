@@ -22,11 +22,11 @@ echo ece_random_bytes(10) == ece_random_bytes(10) ? 'Equal' : 'Different';
 --EXPECTF--
 Warning: ece_random_bytes() expects exactly 1 parameter, 0 given in %s on line %d
 
-Warning: ece_random_bytes(): The number of cryptographically secure random bytes to generate must be in range of [1, 8192] in %s on line %d
+Warning: ece_random_bytes(): the length must be in range of [1, 8192] in %s on line %d
 
 Warning: ece_random_bytes() expects parameter 1 to be integer, string given in %s on line %d
 
-Warning: ece_random_bytes(): The number of cryptographically secure random bytes to generate must be in range of [1, 8192] in %s on line %d
+Warning: ece_random_bytes(): the length must be in range of [1, 8192] in %s on line %d
 32
 64
 50

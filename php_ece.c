@@ -83,19 +83,40 @@ ZEND_GET_MODULE(ece)
 #endif
 
 // -----------------------------------------------------------------------------
-// Error messages
+// Constants
 
-const char kRandomBytesRangeError[] =
-    "The number of cryptographically secure random bytes to generate must be "
-    "in range of [1, 8192]";
-const char kRandomBytesAllocationError[] =
-    "Unable to allocate a buffer for the cryptographically secure random bytes";
-const char kRandomBytesEntropyError[] =
-    "Not sufficient entropy available to generate cryptographically secure "
-    "random bytes";
+// A P-256 field element consists of 32 bytes.
+const size_t kFieldBytes = 32;
+
+// A P-256 point in uncompressed form consists of 0x04 (to denote that the point
+// is uncompressed per SEC1 2.3.3) followed by two, 32-byte field elements.
+const size_t kUncompressedPointBytes = 65;
+
+// -----------------------------------------------------------------------------
+// Error messages
 
 const char kInvalidKeyParameter[] =
     "supplied resource is not a valid P-256 key pair resource";
+
+const char kGenerateKeyCurveError[] =
+    "unable to create a new key using the P-256 curve";
+const char kGenerateKeyGenerateError[] =
+    "unable to generate a new key using the P-256 curve";
+
+const char kExportAllocationError[] =
+    "unable to allocate a buffer for exporting a key pair";
+const char kExportPublicKeyInvalidFields[] =
+    "unable to export the public key: invalid field bytes";
+const char kExportPublicKeyFailed[] =
+    "unable to export the public key: cannot get affine coordinates";
+
+const char kRandomBytesRangeError[] =
+    "the length must be in range of [1, 8192]";
+const char kRandomBytesAllocationError[] =
+    "unable to allocate a buffer for the cryptographically secure random bytes";
+const char kRandomBytesEntropyError[] =
+    "not sufficient entropy available to generate cryptographically secure "
+    "random bytes";
 
 // -----------------------------------------------------------------------------
 // Type definitions (P-256 key)
@@ -169,10 +190,17 @@ static zend_string* GenerateCryptographicallySecureRandomBytes(size_t length) {
 
 PHP_FUNCTION(ece_p256_generate) {
   EC_KEY* key = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
-  if (key)
-    RETURN_RES(zend_register_resource(key, le_ec_key));
+  if (!key) {
+    php_error_docref(NULL, E_ERROR, kGenerateKeyCurveError);
+    return;
+  }
 
-  RETURN_FALSE;
+  if (!EC_KEY_generate_key(key)) {
+    php_error_docref(NULL, E_ERROR, kGenerateKeyGenerateError);
+    return;
+  }
+
+  RETURN_RES(zend_register_resource(key, le_ec_key));
 }
 
 PHP_FUNCTION(ece_p256_import) {
@@ -183,6 +211,9 @@ PHP_FUNCTION(ece_p256_export) {
   zval* value;
   EC_KEY* key;
 
+  zend_string* public_key_string = NULL;
+  zend_string* private_key_string = NULL;
+
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "z", &value) == FAILURE)
     return;
 
@@ -190,7 +221,61 @@ PHP_FUNCTION(ece_p256_export) {
   if (key == NULL) 
     RETURN_FALSE;
 
-  RETVAL_LONG(42);
+  array_init(return_value);
+
+  // Export the public key in |key| in uncompressed form per SEC1 2.3.3. It's a
+  // 65-byte sequence of bytes that starts with 0x04, followed by two 32-byte
+  // field points representing the x/y coordinates on the curve.
+  {
+    const EC_GROUP* group = EC_KEY_get0_group(key);
+    const EC_POINT* public_key = EC_KEY_get0_public_key(key);
+    
+    BIGNUM* x = BN_new();
+    BIGNUM* y = BN_new();
+
+    int success = 0;
+
+    if (!x || !y) {
+      php_error_docref(NULL, E_ERROR, kExportAllocationError);
+      return;
+    }
+
+    if (EC_POINT_get_affine_coordinates_GFp(group, public_key, x, y, NULL)) {
+      if (BN_num_bytes(x) == kFieldBytes || BN_num_bytes(y) == kFieldBytes) {
+        public_key_string = zend_string_alloc(kUncompressedPointBytes, 0);
+        if (public_key_string) {
+          unsigned char* buffer = (unsigned char*) public_key_string->val;
+
+          buffer[0] = 0x04;
+          if (BN_bn2bin(x, &buffer[1]) == kFieldBytes &&
+              BN_bn2bin(y, &buffer[1 + kFieldBytes]) == kFieldBytes) {
+            success = 1;
+          } else {
+            php_error_docref(NULL, E_ERROR, kExportAllocationError);
+          }
+        } else {
+          php_error_docref(NULL, E_ERROR, kExportAllocationError);
+        }
+      } else {
+        php_error_docref(NULL, E_ERROR, kExportPublicKeyInvalidFields);
+      }
+    } else {
+      php_error_docref(NULL, E_ERROR, kExportPublicKeyFailed);
+    }
+
+    BN_free(x);
+    BN_free(y);
+
+    if (!success) {
+      if (public_key_string)
+        zend_string_free(public_key_string);
+
+      return;
+    }
+  }
+
+  add_assoc_str(return_value, "public", public_key_string);
+  add_assoc_null(return_value, "private");
 }
 
 PHP_FUNCTION(ece_p256_compute_key) {
