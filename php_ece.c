@@ -24,11 +24,28 @@
 #include "php_ini.h"
 #include "php_ece.h"
 
-ZEND_BEGIN_ARG_INFO(arginfo_ece_hello_world, 0)
+ZEND_BEGIN_ARG_INFO(arginfo_ece_p256_generate, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_ece_p256_import, 0, 0, 1)
+  ZEND_ARG_INFO(0, public)
+  ZEND_ARG_INFO(0, private)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_ece_p256_export, 0, 0, 1)
+  ZEND_ARG_INFO(0, pair)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_p256_compute_key, 0, 0, 2)
+  ZEND_ARG_INFO(0, local_pair)
+  ZEND_ARG_INFO(0, peer_pair)
 ZEND_END_ARG_INFO()
 
 const zend_function_entry ece_functions[] = {
-   PHP_FE(ece_hello_world, arginfo_ece_hello_world)
+   PHP_FE(ece_p256_generate,     arginfo_ece_p256_generate)
+   PHP_FE(ece_p256_import,       arginfo_ece_p256_import)
+   PHP_FE(ece_p256_export,       arginfo_ece_p256_export)
+   PHP_FE(ece_p256_compute_key,  arginfo_p256_compute_key)
    PHP_FE_END
 };
 
@@ -59,6 +76,18 @@ PHP_MSHUTDOWN_FUNCTION(ece) {
    return SUCCESS;
 }
 
-PHP_FUNCTION(ece_hello_world) {
+PHP_FUNCTION(ece_p256_generate) {
+   php_error_docref(NULL, E_WARNING, "Not implemented yet");
+}
+
+PHP_FUNCTION(ece_p256_import) {
+   php_error_docref(NULL, E_WARNING, "Not implemented yet");
+}
+
+PHP_FUNCTION(ece_p256_export) {
+   php_error_docref(NULL, E_WARNING, "Not implemented yet");
+}
+
+PHP_FUNCTION(ece_p256_compute_key) {
    php_error_docref(NULL, E_WARNING, "Not implemented yet");
 }
