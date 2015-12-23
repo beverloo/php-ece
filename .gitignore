@@ -27,3 +27,4 @@ mkinstalldirs
 php_ece.lo
 run-tests.php
 sftp-config.json
+tmp-php.ini
