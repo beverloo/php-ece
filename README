@@ -1,0 +1,5 @@
+PHP Extension for for enabling Encrypted Content-Encoding for HTTP implementations.
+
+    https://tools.ietf.org/html/draft-thomson-http-encryption
+
+This extension is not meant to be used for production usage.
