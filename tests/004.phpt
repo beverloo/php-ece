@@ -24,9 +24,15 @@ echo 'Public key: ' . strlen($pair['public']) . ' bytes' . PHP_EOL;
 echo 'Private key: ';
 
 if (array_key_exists('private', $pair) && is_string($pair['private']))
-  echo strlen($pair['private']) . ' bytes' . NULL;
+  echo strlen($pair['private']) . ' bytes' . PHP_EOL;
 else
   echo 'NULL' . PHP_EOL;
+
+// Compare values when exported again.
+$pair2 = ece_p256_export($keys);
+
+echo ($pair['public'] === $pair2['public'] ? 'Equal' : 'Different') . PHP_EOL;
+echo ($pair['private'] === $pair2['private'] ? 'Equal' : 'Different') . PHP_EOL;
 
 ece_p256_free($keys);
 ?>
@@ -40,3 +46,5 @@ Warning: ece_p256_export(): supplied resource is not a valid P-256 key pair reso
 Warning: ece_p256_export(): supplied resource is not a valid P-256 key pair resource in %s on line 10
 Public key: 65 bytes
 Private key: 32 bytes
+Equal
+Equal

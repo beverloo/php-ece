@@ -26,6 +26,7 @@
 
 #include <stdlib.h>
 #include <openssl/ec.h>
+#include <openssl/ecdh.h>
 #include <openssl/evp.h>
 #include <openssl/rand.h>
 
@@ -113,6 +114,13 @@ const char kExportPublicKeyFailed[] =
     "unable to export the public key: cannot get affine coordinates";
 const char kExportPrivateKeyBignumError[] =
     "unable to export the public key: cannot write the bignum";
+
+const char kComputeKeyNoPrivate[] =
+    "the local key-pair must have both a public and a private key";
+const char kComputeKeyNoPublic[] =
+    "cannot extract the public key from the peer's key pair";
+const char kComputeKeyFailed[] =
+    "cannot compute the shared secret between the two keys";
 
 const char kRandomBytesRangeError[] =
     "the length must be in range of [1, 8192]";
@@ -304,7 +312,51 @@ PHP_FUNCTION(ece_p256_export) {
 }
 
 PHP_FUNCTION(ece_p256_compute_key) {
-  php_error_docref(NULL, E_WARNING, "Not implemented yet");
+  zval* local_value, * peer_value;
+  EC_KEY* local_key, * peer_key;
+
+  if (zend_parse_parameters(ZEND_NUM_ARGS(), "zz", &local_value, &peer_value)
+          == FAILURE) {
+    return;
+  }
+
+  local_key = php_ec_key_from_zval(local_value);
+  peer_key = php_ec_key_from_zval(peer_value);
+
+  if (local_key == NULL || peer_key == NULL) 
+    RETURN_FALSE;
+
+  {
+    const BIGNUM* private_key = EC_KEY_get0_private_key(local_key);
+    const EC_POINT* public_key = EC_KEY_get0_public_key(peer_key);
+    zend_string* result = NULL;
+
+    // Verify that the |local_key| has a private key. The |peer_key| only needs
+    // the public key set (which will always be the case).
+    if (!private_key) {
+      php_error_docref(NULL, E_WARNING, kComputeKeyNoPrivate);
+      RETURN_FALSE;
+    }
+
+    // This should never happen. Why would this happen?
+    if (!public_key) {
+      php_error_docref(NULL, E_ERROR, kComputeKeyNoPublic);
+      RETURN_FALSE;
+    }
+
+    result = zend_string_alloc(kFieldBytes, 0);
+    if (result) {
+      unsigned char* buffer = (unsigned char*) result->val;
+      if (ECDH_compute_key(buffer, kFieldBytes, public_key, local_key, NULL)
+              == kFieldBytes) {
+        RETURN_STR(result);
+      }
+
+      php_error_docref(NULL, E_WARNING, kComputeKeyFailed);
+    }
+  }
+
+  RETURN_FALSE;
 }
 
 PHP_FUNCTION(ece_p256_free) {
