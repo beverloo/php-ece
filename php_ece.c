@@ -104,6 +104,17 @@ const char kGenerateKeyCurveError[] =
 const char kGenerateKeyGenerateError[] =
     "unable to generate a new key using the P-256 curve";
 
+const char kImportInvalidPublicSize[] =
+    "unable to import the public key: must be 65 bytes and start with 0x04";
+const char kImportInvalidPrivateSize[] =
+    "unable to import the private key: must be 32 bytes long";
+const char kImportAllocationError[] =
+    "unable to allocate a buffer for importing the keys";
+const char kImportInvalidPrivateKey[] =
+    "unable to import the private key, is it a P-256 private value?";
+const char kImportInvalidPublicKey[] =
+    "unable to import and validate the public key";
+
 const char kExportAllocationError[] =
     "unable to allocate a buffer for exporting a key pair";
 const char kExportPublicKeyBignumError[] =
@@ -216,7 +227,83 @@ PHP_FUNCTION(ece_p256_generate) {
 }
 
 PHP_FUNCTION(ece_p256_import) {
-  php_error_docref(NULL, E_WARNING, "Not implemented yet");
+  char* public_value, * private_value;
+  size_t public_len = 0, private_len = 0;
+
+  EC_KEY* key = NULL;
+  int success = 0;
+
+  if (zend_parse_parameters(ZEND_NUM_ARGS(), "s|s", &public_value, &public_len, &private_value,
+                            &private_len) == FAILURE) {
+    return;
+  }
+
+  // Verify that the public key is 65 bytes long and starts with 0x04.
+  if (public_len != kUncompressedPointBytes || public_value[0] != 0x04) {
+    php_error_docref(NULL, E_WARNING, kImportInvalidPublicSize);
+    RETURN_FALSE;
+  }
+
+  // Verify that the private key is either empty, or 32 bytes long.
+  if (private_len != 0 && private_len != kFieldBytes) {
+    php_error_docref(NULL, E_WARNING, kImportInvalidPrivateSize);
+    RETURN_FALSE;
+  }
+
+  key = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
+  if (!key) {
+    php_error_docref(NULL, E_ERROR, kImportAllocationError);
+    return;
+  }
+
+  // Import the |private_value|, when available, to the |key|.
+  if (private_len == kFieldBytes) {
+    unsigned char* private_buffer = (unsigned char*) private_value;
+
+    BIGNUM* w = BN_bin2bn(private_buffer, kFieldBytes, NULL);
+    if (!w) {
+      php_error_docref(NULL, E_ERROR, kImportAllocationError);
+      return;
+    }
+
+    if (!EC_KEY_set_private_key(key, w)) {
+      php_error_docref(NULL, E_WARNING, kImportInvalidPrivateKey);
+      return;
+    }
+
+    BN_free(w);
+  }
+
+  // Import the |public_value| to the |key|.
+  {
+    unsigned char* public_buffer = (unsigned char*) public_value;
+
+    BIGNUM* x = BN_bin2bn(&public_buffer[1], kFieldBytes, NULL);
+    BIGNUM* y = BN_bin2bn(&public_buffer[1 + kFieldBytes], kFieldBytes, NULL);
+
+    if (!x || !y) {
+      php_error_docref(NULL, E_ERROR, kImportAllocationError);
+
+      if (x) BN_free(x);
+      if (y) BN_free(y);
+      return;
+    }
+
+    if (EC_KEY_set_public_key_affine_coordinates(key, x, y) != 1)
+      php_error_docref(NULL, E_WARNING, kImportInvalidPublicKey);
+    else
+      success = 1;
+
+    BN_free(x);
+    BN_free(y);
+  }
+
+  if (!success) {
+    EC_KEY_free(key);
+    RETURN_FALSE;
+  }
+
+  RETURN_RES(zend_register_resource(key, le_ec_key));
 }
 
 PHP_FUNCTION(ece_p256_export) {
@@ -249,6 +336,9 @@ PHP_FUNCTION(ece_p256_export) {
 
     if (!x || !y) {
       php_error_docref(NULL, E_ERROR, kExportAllocationError);
+
+      if (x) BN_free(x);
+      if (y) BN_free(y);
       return;
     }
 
