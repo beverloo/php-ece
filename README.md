@@ -19,6 +19,9 @@ The following functions are available as part of this extension.
   - [ece_p256_compute_key(resource $local_key, resource $peer_key)]
 (#string-ece_p256_compute_keyresource-local_key-resource-peer_key)
   - [ece_p256_free(resource $key)](#array-ece_p256_freeresource-key)
+- **AES-GCM Functions**
+  - ece_aesgcm128_encrypt(string $plaintext, string $key, string $nonce)
+  - ece_aesgcm128_decrypt(string $ciphertext, string $key, string $nonce)
 - **Miscellaneous**
   - [ece_random_bytes(int $length)](#string-ece_random_bytesint-length)
 
@@ -62,6 +65,27 @@ key of the `$peer_key` is required.
 #### array ece_p256_free(resource $key);
 
 Frees the P-256 key in `$key`.
+
+
+#### string ece_aesgcm128_encrypt(string $plaintext, string $key, string $nonce)
+
+Encrypts `$plaintext` using AEAD_AES_GCM_128 using `$key` as the encryption key
+and `$nonce` as the IV.
+
+An authentication tag of 128 bits (16 bytes) will be prepended to the returned
+string. The returned string wil be in binary format.
+
+
+#### string ece_aesgcm128_decrypt(string $ciphertext, string $key, string $nonce)
+
+Decrypts `$ciphertext` using AEAD_AES_GCM_128 using `$key` as the encryption key
+and `$nonce` as the IV.
+
+An authentication tag of 128 bits (16 bytes) is expected to be included at the
+beginning of `$ciphertext`. Omission of the authentication tag is considered to
+be a fatal error.
+
+The returned string wil be in binary format.
 
 
 #### string ece_random_bytes(int $length);

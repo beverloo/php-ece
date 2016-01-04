@@ -51,6 +51,19 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_ece_p256_free, 0, 0, 1)
   ZEND_ARG_INFO(0, pair)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_ece_aesgcm128_encrypt, 0, 0, 3)
+  ZEND_ARG_INFO(0, plaintext)
+  ZEND_ARG_INFO(0, key)
+  ZEND_ARG_INFO(0, nonce)
+  ZEND_ARG_INFO(0, padding)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_ece_aesgcm128_decrypt, 0, 0, 2)
+  ZEND_ARG_INFO(0, ciphertext)
+  ZEND_ARG_INFO(0, key)
+  ZEND_ARG_INFO(0, nonce)
+ZEND_END_ARG_INFO()
+
 ZEND_BEGIN_ARG_INFO_EX(arginfo_ece_random_bytes, 0, 0, 1)
   ZEND_ARG_INFO(0, bytes)
 ZEND_END_ARG_INFO()
@@ -61,6 +74,9 @@ const zend_function_entry ece_functions[] = {
   PHP_FE(ece_p256_export,       arginfo_ece_p256_export)
   PHP_FE(ece_p256_compute_key,  arginfo_ece_p256_compute_key)
   PHP_FE(ece_p256_free,         arginfo_ece_p256_free)
+
+  PHP_FE(ece_aesgcm128_encrypt, arginfo_ece_aesgcm128_encrypt)
+  PHP_FE(ece_aesgcm128_decrypt, arginfo_ece_aesgcm128_decrypt)
 
   PHP_FE(ece_random_bytes,      arginfo_ece_random_bytes)
   PHP_FE_END
@@ -465,6 +481,17 @@ PHP_FUNCTION(ece_p256_free) {
   key = php_ec_key_from_zval(value);
   if (key)
     zend_list_close(Z_RES_P(value));
+}
+
+// -----------------------------------------------------------------------------
+// Function implementations (AES-GCM-128)
+
+PHP_FUNCTION(ece_aesgcm128_encrypt) {
+  RETURN_FALSE;
+}
+
+PHP_FUNCTION(ece_aesgcm128_decrypt) {
+  RETURN_FALSE;
 }
 
 // -----------------------------------------------------------------------------

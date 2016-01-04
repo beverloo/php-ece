@@ -33,6 +33,9 @@ PHP_FUNCTION(ece_p256_export);
 PHP_FUNCTION(ece_p256_compute_key);
 PHP_FUNCTION(ece_p256_free);
 
+PHP_FUNCTION(ece_aesgcm128_encrypt);
+PHP_FUNCTION(ece_aesgcm128_decrypt);
+
 PHP_FUNCTION(ece_random_bytes);
 
 #endif  // PHP_ECE_H
