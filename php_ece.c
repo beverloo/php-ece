@@ -55,10 +55,9 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_ece_aesgcm128_encrypt, 0, 0, 3)
   ZEND_ARG_INFO(0, plaintext)
   ZEND_ARG_INFO(0, key)
   ZEND_ARG_INFO(0, nonce)
-  ZEND_ARG_INFO(0, padding)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_ece_aesgcm128_decrypt, 0, 0, 2)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_ece_aesgcm128_decrypt, 0, 0, 3)
   ZEND_ARG_INFO(0, ciphertext)
   ZEND_ARG_INFO(0, key)
   ZEND_ARG_INFO(0, nonce)
@@ -109,6 +108,12 @@ const size_t kFieldBytes = 32;
 // is uncompressed per SEC1 2.3.3) followed by two, 32-byte field elements.
 const size_t kUncompressedPointBytes = 65;
 
+// Number of bytes of keying material expected by the aesgcm128 functions.
+const size_t kAesGcmKeyBytes = 16;
+
+// Number of bytes of nonce expected by the aesgcm128 functions.
+const size_t kAesGcmNonceBytes = 12;
+
 // -----------------------------------------------------------------------------
 // Error messages
 
@@ -148,6 +153,13 @@ const char kComputeKeyNoPublic[] =
     "cannot extract the public key from the peer's key pair";
 const char kComputeKeyFailed[] =
     "cannot compute the shared secret between the two keys";
+
+const char kAesGcmInvalidKey[] =
+    "the $key must be exactly 16 bytes in size";
+const char kAesGcmInvalidNonce[] =
+    "the $nonce must be exactly 12 bytes in size";
+const char kAesGcmInvalidCiphertext[] =
+    "the $ciphertext must have at least 16 bytes of data";
 
 const char kRandomBytesRangeError[] =
     "the length must be in range of [1, 8192]";
@@ -487,11 +499,58 @@ PHP_FUNCTION(ece_p256_free) {
 // Function implementations (AES-GCM-128)
 
 PHP_FUNCTION(ece_aesgcm128_encrypt) {
-  RETURN_FALSE;
+  char* plaintext, * key, * nonce;
+  size_t plaintext_len = 0, key_len = 0, nonce_len = 0;
+
+  if (zend_parse_parameters(ZEND_NUM_ARGS(), "sss", &plaintext, &plaintext_len,
+                            &key, &key_len, &nonce, &nonce_len) == FAILURE) {
+    RETURN_FALSE;
+  }
+
+  // Confirm that the |$key| has the right amount of data.
+  if (key_len != kAesGcmKeyBytes) {
+    php_error_docref(NULL, E_WARNING, kAesGcmInvalidKey);
+    RETURN_FALSE;
+  }
+
+  // Confirm that the |$nonce| has the right amount of data.
+  if (nonce_len != kAesGcmNonceBytes) {
+    php_error_docref(NULL, E_WARNING, kAesGcmInvalidNonce);
+    RETURN_FALSE;
+  }
+
+  RETURN_TRUE;
 }
 
 PHP_FUNCTION(ece_aesgcm128_decrypt) {
-  RETURN_FALSE;
+  char* ciphertext, * key, * nonce;
+  size_t ciphertext_len = 0, key_len = 0, nonce_len = 0;
+
+  if (zend_parse_parameters(ZEND_NUM_ARGS(), "sss", &ciphertext, &ciphertext_len,
+                            &key, &key_len, &nonce, &nonce_len) == FAILURE) {
+    RETURN_FALSE;
+  }
+
+  // Confirm that the |$key| has the right amount of data.
+  if (key_len != kAesGcmKeyBytes) {
+    php_error_docref(NULL, E_WARNING, kAesGcmInvalidKey);
+    RETURN_FALSE;
+  }
+
+  // Confirm that the |$nonce| has the right amount of data.
+  if (nonce_len != kAesGcmNonceBytes) {
+    php_error_docref(NULL, E_WARNING, kAesGcmInvalidNonce);
+    RETURN_FALSE;
+  }
+
+  // Confirm that the |$ciphertext| has at least 16 bytes of data, which is the
+  // size of the mandatory authentication tag.
+  if (ciphertext_len < 16) {
+    php_error_docref(NULL, E_WARNING, kAesGcmInvalidCiphertext);
+    RETURN_FALSE;
+  }
+
+  RETURN_TRUE;
 }
 
 // -----------------------------------------------------------------------------
