@@ -20,8 +20,10 @@ The following functions are available as part of this extension.
 (#string-ece_p256_compute_keyresource-local_key-resource-peer_key)
   - [ece_p256_free(resource $key)](#array-ece_p256_freeresource-key)
 - **AES-GCM Functions**
-  - ece_aesgcm128_encrypt(string $plaintext, string $key, string $nonce)
-  - ece_aesgcm128_decrypt(string $ciphertext, string $key, string $nonce)
+  - [ece_aesgcm128_encrypt(string $plaintext, string $key, string $nonce)]
+(#string-ece_aesgcm128_encryptstring-plaintext-string-key-string-nonce)
+  - [ece_aesgcm128_decrypt(string $ciphertext, string $key, string $nonce)]
+(#string-ece_aesgcm128_decryptstring-ciphertext-string-key-string-nonce)
 - **Miscellaneous**
   - [ece_random_bytes(int $length)](#string-ece_random_bytesint-length)
 
@@ -72,6 +74,10 @@ Frees the P-256 key in `$key`.
 Encrypts `$plaintext` using AEAD_AES_GCM_128 using `$key` as the encryption key
 and `$nonce` as the IV.
 
+The `$key` must be passed as a binary string that is exactly 128 bits (16 bytes)
+in length. The `$nonce` must be passed as a binary string that is exactly 96
+bits (12 bytes) in length.
+
 An authentication tag of 128 bits (16 bytes) will be prepended to the returned
 string. The returned string wil be in binary format.
 
@@ -80,6 +86,10 @@ string. The returned string wil be in binary format.
 
 Decrypts `$ciphertext` using AEAD_AES_GCM_128 using `$key` as the encryption key
 and `$nonce` as the IV.
+
+The `$key` must be passed as a binary string that is exactly 128 bits (16 bytes)
+in length. The `$nonce` must be passed as a binary string that is exactly 96
+bits (12 bytes) in length.
 
 An authentication tag of 128 bits (16 bytes) is expected to be included at the
 beginning of `$ciphertext`. Omission of the authentication tag is considered to
