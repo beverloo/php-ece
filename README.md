@@ -5,7 +5,13 @@ IETF Encrypted Content-Encoding draft in PHP.
 
 https://tools.ietf.org/html/draft-thomson-http-encryption
 
+The [GMP extension](http://php.net/manual/en/ref.gmp.php) can be used for more
+convenience in converting [to](http://php.net/manual/en/function.gmp-import.php)
+and [from](http://php.net/manual/en/function.gmp-export.php) numbers of
+arbitrary length coming from binary strings.
+
 This extension is not meant to be used for production usage.
+
 
 ## Functions
 
