@@ -101,6 +101,10 @@ ZEND_GET_MODULE(ece)
 // -----------------------------------------------------------------------------
 // Constants
 
+// Directionality constants for translating aes-gcm-128 content.
+const int TRANSLATE_ENCRYPT = 0;
+const int TRANSLATE_DECRYPT = 1;
+
 // A P-256 field element consists of 32 bytes.
 const size_t kFieldBytes = 32;
 
@@ -160,6 +164,20 @@ const char kAesGcmInvalidNonce[] =
     "the $nonce must be exactly 12 bytes in size";
 const char kAesGcmInvalidCiphertext[] =
     "the $ciphertext must have at least 16 bytes of data";
+
+const char kTranslateInitGcmError[] =
+    "unable to initialize the OpenSSL AES-GCM-128 cipher";
+const char kTranslateKeyNonceError[] =
+    "unable to import the key and nonce in the AES-GCM-128 cipher";
+const char kTranslateAllocationError[] =
+    "unable to allocate a buffer for the result string";
+const char kTranslateEncryptInputError[] = "unable to encrypt the input data";
+const char kTranslateEncryptAuthError[] =
+    "unable to export the authentication tag";
+const char kTranslateDecryptAuthError[] =
+    "unable to import the authentication tag";
+const char kTranslateDecryptionWarning[] =
+    "unable to decrypt or authenticate the ciphertext";
 
 const char kRandomBytesRangeError[] =
     "the length must be in range of [1, 8192]";
@@ -240,6 +258,103 @@ static zend_string* GenerateCryptographicallySecureRandomBytes(size_t length) {
   }
 
   return buffer;
+}
+
+// Translates |input| of |input_len| using aes-gcm-128. The |input| will either
+// be encrypted or decrypted based on |direction|. The |key|, which must be of
+// size |kAesGcmKeyBytes|, and the |nonce|, which must be of size
+// |kAesGcmNonceBytes|, will be used for the translation. A new zend string will
+// be returned on success, or NULL (with a visible warning) on failure.
+static zend_string* AesGcm128Translate(
+    int direction, char* input, size_t input_len, char* key, char* nonce) {
+  const EVP_CIPHER* aead = EVP_aes_128_gcm();
+
+  zend_string* result = NULL;
+
+  int expected_len = 0;
+  int result_len = 0;
+
+  EVP_CIPHER_CTX context;
+  EVP_CIPHER_CTX_init(&context);
+
+  do {
+    if (direction == TRANSLATE_ENCRYPT) {
+      if (EVP_EncryptInit_ex(&context, aead, 0, 0, 0) != 1) {
+        php_error_docref(NULL, E_ERROR, kTranslateInitGcmError);
+        break;
+      }
+
+      if (EVP_CIPHER_CTX_ctrl(&context, EVP_CTRL_GCM_SET_IVLEN, 12, 0) != 1 ||
+          EVP_EncryptInit_ex(&context, 0, 0, key, nonce) != 1) {
+        php_error_docref(NULL, E_ERROR, kTranslateKeyNonceError);
+        break;
+      }
+
+      expected_len = input_len + 16 /* authentication tag */;
+      result = zend_string_alloc(expected_len, 0);
+      if (!result) {
+        php_error_docref(NULL, E_ERROR, kTranslateAllocationError);
+        break;
+      }
+
+      if (EVP_EncryptUpdate(&context, result->val, &result_len, input, input_len) != 1 ||
+          EVP_EncryptFinal_ex(&context, result->val, &result_len) != 1) {
+        php_error_docref(NULL, E_ERROR, kTranslateEncryptInputError);
+        zend_string_release(result);
+        result = NULL;
+        break;
+      }
+
+      if (EVP_CIPHER_CTX_ctrl(&context, EVP_CTRL_GCM_GET_TAG, 16, result->val + input_len) != 1) {
+        php_error_docref(NULL, E_ERROR, kTranslateEncryptAuthError);
+        zend_string_release(result);
+        result = NULL;
+        break;
+      }
+
+      // Encryption successful!
+
+    } else {
+      if (EVP_DecryptInit_ex(&context, aead, 0, 0, 0) != 1) {
+        php_error_docref(NULL, E_ERROR, kTranslateInitGcmError);
+        break;
+      }
+
+      expected_len = input_len - 16;
+
+      if (EVP_CIPHER_CTX_ctrl(&context, EVP_CTRL_GCM_SET_TAG, 16, input + expected_len) != 1) {
+        php_error_docref(NULL, E_ERROR, kTranslateDecryptAuthError);
+        break;
+      }
+
+      if (EVP_CIPHER_CTX_ctrl(&context, EVP_CTRL_GCM_SET_IVLEN, 12, 0) != 1 ||
+          EVP_DecryptInit_ex(&context, 0, 0, key, nonce) != 1) {
+        php_error_docref(NULL, E_ERROR, kTranslateKeyNonceError);
+        break;
+      }
+
+      result = zend_string_alloc(expected_len, 0);
+      if (!result) {
+        php_error_docref(NULL, E_ERROR, kTranslateAllocationError);
+        break;
+      }
+
+      if (EVP_DecryptUpdate(&context, result->val, &result_len, input, expected_len) != 1 ||
+          EVP_DecryptFinal_ex(&context, result->val + expected_len, &result_len) != 1) {
+        php_error_docref(NULL, E_WARNING, kTranslateDecryptionWarning);
+
+        zend_string_release(result);
+        result = NULL;
+        break;
+      }
+
+      // Decryption successful!
+    }
+  } while(0);
+
+  EVP_CIPHER_CTX_cleanup(&context);
+
+  return result;
 }
 
 // -----------------------------------------------------------------------------
@@ -519,7 +634,13 @@ PHP_FUNCTION(ece_aesgcm128_encrypt) {
     RETURN_FALSE;
   }
 
-  RETURN_TRUE;
+  zend_string* ciphertext = AesGcm128Translate(TRANSLATE_ENCRYPT, plaintext,
+                                               plaintext_len, key, nonce);
+
+  if (ciphertext)
+    RETVAL_STR(ciphertext);
+  else
+    RETURN_FALSE;
 }
 
 PHP_FUNCTION(ece_aesgcm128_decrypt) {
@@ -550,7 +671,13 @@ PHP_FUNCTION(ece_aesgcm128_decrypt) {
     RETURN_FALSE;
   }
 
-  RETURN_TRUE;
+  zend_string* plaintext = AesGcm128Translate(TRANSLATE_DECRYPT, ciphertext,
+                                              ciphertext_len, key, nonce);
+
+  if (plaintext)
+    RETVAL_STR(plaintext);
+  else
+    RETURN_FALSE;
 }
 
 // -----------------------------------------------------------------------------
